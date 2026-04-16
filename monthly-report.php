@@ -13,8 +13,133 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-add_action( 'admin_menu', 'monthly_report_add_admin_menu' );
-add_action( 'admin_init', 'monthly_report_check_woocommerce' );
+add_action( 'wp_dashboard_setup', 'monthly_report_add_dashboard_widget' );
+
+function monthly_report_get_dashboard_data() {
+    global $wpdb;
+
+    $table_name = esc_sql( $wpdb->prefix . 'wc_orders' );
+    $start_date = date( 'Y-m-d' );
+    $end_date = date( 'Y-m-d' );
+
+    $query = "
+        SELECT
+            id,
+            payment_method,
+            total_amount,
+            TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) AS order_time
+        FROM {$table_name}
+        WHERE status = %s
+            AND DATE(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN %s AND %s
+    ";
+
+    $orders = $wpdb->get_results( $wpdb->prepare( $query, 'wc-completed', $start_date, $end_date ), ARRAY_A );
+
+    $data = [];
+    foreach ( $orders as $order ) {
+        $method = $order['payment_method'];
+        if ( ! $method ) {
+            $wc_order = wc_get_order( $order['id'] );
+            if ( $wc_order ) {
+                $meta_value = $wc_order->get_meta( '_vtp_payment_list' );
+                if ( $meta_value ) {
+                    $method = is_array( $meta_value ) && isset( $meta_value[0]['name'] ) ? ($meta_value[0]['name'] == 'Others') ? __( 'UPI', 'monthly-report' ) : $meta_value[0]['name'] : __( 'Unknown', 'monthly-report' );
+                } else {
+                    $method = __( 'Unknown', 'monthly-report' );
+                }
+            } else {
+                $method = __( 'Unknown', 'monthly-report' );
+            }
+        }
+
+        $time = $order['order_time'];
+        $amount = floatval( $order['total_amount'] );
+
+        if ( $time >= '07:00:00' && $time < '12:30:00' ) {
+            $data['breakfast'][$method] = ( $data['breakfast'][$method] ?? 0 ) + $amount;
+        } elseif ( $time >= '12:30:00' && $time < '16:00:00' ) {
+            $data['lunch'][$method] = ( $data['lunch'][$method] ?? 0 ) + $amount;
+        } elseif ( $time >= '18:00:00' && $time < '23:30:00' ) {
+            $data['dinner'][$method] = ( $data['dinner'][$method] ?? 0 ) + $amount;
+        }
+    }
+
+    return $data;
+}
+
+function monthly_report_add_dashboard_widget() {
+    wp_add_dashboard_widget(
+        'monthly_report_dashboard_widget',
+        __( 'Today Sales by Time Slot and Payment Method', 'monthly-report' ),
+        'monthly_report_dashboard_widget_callback'
+    );
+}
+
+function monthly_report_dashboard_widget_callback() {
+    $data = monthly_report_get_dashboard_data();
+
+    ?>
+    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+        <div style="flex: 1; min-width: 200px;">
+            <h4><?php esc_html_e( 'Breakfast Sales', 'monthly-report' ); ?></h4>
+            <table class="widefat">
+                <thead>
+                    <tr>
+                        <th><?php esc_html_e( 'Payment Method', 'monthly-report' ); ?></th>
+                        <th><?php esc_html_e( 'Sales', 'monthly-report' ); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $data['breakfast'] ?? [] as $method => $sales ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( $method ); ?></td>
+                            <td><?php echo wp_kses_post( wc_price( $sales ) ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+            <h4><?php esc_html_e( 'Lunch Sales', 'monthly-report' ); ?></h4>
+            <table class="widefat">
+                <thead>
+                    <tr>
+                        <th><?php esc_html_e( 'Payment Method', 'monthly-report' ); ?></th>
+                        <th><?php esc_html_e( 'Sales', 'monthly-report' ); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $data['lunch'] ?? [] as $method => $sales ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( $method ); ?></td>
+                            <td><?php echo wp_kses_post( wc_price( $sales ) ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+            <h4><?php esc_html_e( 'Dinner Sales', 'monthly-report' ); ?></h4>
+            <table class="widefat">
+                <thead>
+                    <tr>
+                        <th><?php esc_html_e( 'Payment Method', 'monthly-report' ); ?></th>
+                        <th><?php esc_html_e( 'Sales', 'monthly-report' ); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $data['dinner'] ?? [] as $method => $sales ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( $method ); ?></td>
+                            <td><?php echo wp_kses_post( wc_price( $sales ) ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php
+}
 
 function monthly_report_check_woocommerce() {
     if ( ! is_admin() ) {
