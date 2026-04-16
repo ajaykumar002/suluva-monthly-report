@@ -55,12 +55,15 @@ function monthly_report_get_dashboard_data() {
         $time = $order['order_time'];
         $amount = floatval( $order['total_amount'] );
 
-        if ( $time >= '07:00:00' && $time < '12:30:00' ) {
-            $data['breakfast'][$method] = ( $data['breakfast'][$method] ?? 0 ) + $amount;
+        if ( $time >= '00:00:00' && $time < '12:30:00' ) {
+            $data['breakfast'][$method]['count'] = ( $data['breakfast'][$method]['count'] ?? 0 ) + 1;
+            $data['breakfast'][$method]['sales'] = ( $data['breakfast'][$method]['sales'] ?? 0 ) + $amount;
         } elseif ( $time >= '12:30:00' && $time < '16:00:00' ) {
-            $data['lunch'][$method] = ( $data['lunch'][$method] ?? 0 ) + $amount;
+            $data['lunch'][$method]['count'] = ( $data['lunch'][$method]['count'] ?? 0 ) + 1;
+            $data['lunch'][$method]['sales'] = ( $data['lunch'][$method]['sales'] ?? 0 ) + $amount;
         } elseif ( $time >= '18:00:00' && $time < '23:30:00' ) {
-            $data['dinner'][$method] = ( $data['dinner'][$method] ?? 0 ) + $amount;
+            $data['dinner'][$method]['count'] = ( $data['dinner'][$method]['count'] ?? 0 ) + 1;
+            $data['dinner'][$method]['sales'] = ( $data['dinner'][$method]['sales'] ?? 0 ) + $amount;
         }
     }
 
@@ -86,14 +89,16 @@ function monthly_report_dashboard_widget_callback() {
                 <thead>
                     <tr>
                         <th><?php esc_html_e( 'Payment Method', 'monthly-report' ); ?></th>
+                        <th><?php esc_html_e( 'Order Count', 'monthly-report' ); ?></th>
                         <th><?php esc_html_e( 'Sales', 'monthly-report' ); ?></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ( $data['breakfast'] ?? [] as $method => $sales ) : ?>
+                    <?php foreach ( $data['breakfast'] ?? [] as $method => $info ) : ?>
                         <tr>
                             <td><?php echo esc_html( $method ); ?></td>
-                            <td><?php echo wp_kses_post( wc_price( $sales ) ); ?></td>
+                            <td><?php echo esc_html( $info['count'] ?? 0 ); ?></td>
+                            <td><?php echo wp_kses_post( wc_price( $info['sales'] ?? 0 ) ); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -105,14 +110,16 @@ function monthly_report_dashboard_widget_callback() {
                 <thead>
                     <tr>
                         <th><?php esc_html_e( 'Payment Method', 'monthly-report' ); ?></th>
+                        <th><?php esc_html_e( 'Order Count', 'monthly-report' ); ?></th>
                         <th><?php esc_html_e( 'Sales', 'monthly-report' ); ?></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ( $data['lunch'] ?? [] as $method => $sales ) : ?>
+                    <?php foreach ( $data['lunch'] ?? [] as $method => $info ) : ?>
                         <tr>
                             <td><?php echo esc_html( $method ); ?></td>
-                            <td><?php echo wp_kses_post( wc_price( $sales ) ); ?></td>
+                            <td><?php echo esc_html( $info['count'] ?? 0 ); ?></td>
+                            <td><?php echo wp_kses_post( wc_price( $info['sales'] ?? 0 ) ); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -124,14 +131,16 @@ function monthly_report_dashboard_widget_callback() {
                 <thead>
                     <tr>
                         <th><?php esc_html_e( 'Payment Method', 'monthly-report' ); ?></th>
+                        <th><?php esc_html_e( 'Order Count', 'monthly-report' ); ?></th>
                         <th><?php esc_html_e( 'Sales', 'monthly-report' ); ?></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ( $data['dinner'] ?? [] as $method => $sales ) : ?>
+                    <?php foreach ( $data['dinner'] ?? [] as $method => $info ) : ?>
                         <tr>
                             <td><?php echo esc_html( $method ); ?></td>
-                            <td><?php echo wp_kses_post( wc_price( $sales ) ); ?></td>
+                            <td><?php echo esc_html( $info['count'] ?? 0 ); ?></td>
+                            <td><?php echo wp_kses_post( wc_price( $info['sales'] ?? 0 ) ); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
