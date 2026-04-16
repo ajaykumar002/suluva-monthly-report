@@ -13,6 +13,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+add_action( 'admin_menu', 'monthly_report_add_admin_menu' );
+add_action( 'admin_init', 'monthly_report_check_woocommerce' );
+add_action( 'admin_init', 'monthly_report_handle_export' );
 add_action( 'wp_dashboard_setup', 'monthly_report_add_dashboard_widget' );
 
 function monthly_report_get_dashboard_data() {
@@ -150,6 +153,110 @@ function monthly_report_dashboard_widget_callback() {
     <?php
 }
 
+function monthly_report_export_csv() {
+    // Prevent any output before headers
+    if ( headers_sent() ) {
+        wp_die( 'Headers already sent. Cannot export CSV.' );
+    }
+
+    $filter_month = isset( $_GET['month'] ) ? sanitize_text_field( wp_unslash( $_GET['month'] ) ) : date( 'Y-m' );
+
+    if ( $filter_month ) {
+        $month_date = DateTime::createFromFormat( 'Y-m', $filter_month );
+    } else {
+        $month_date = new DateTime();
+    }
+
+    if ( $month_date instanceof DateTime ) {
+        $start_date = $month_date->format( 'Y-m-01' );
+        $end_date   = $month_date->format( 'Y-m-t' );
+    } else {
+        $start_date = date( 'Y-m-01' );
+        $end_date   = date( 'Y-m-t' );
+    }
+
+    $report_rows = monthly_report_get_time_slot_report( $start_date, $end_date );
+
+    $total_days = count( $report_rows );
+    $total_breakfast_orders = 0;
+    $total_breakfast_sales = 0.0;
+    $total_lunch_orders = 0;
+    $total_lunch_sales = 0.0;
+    $total_dinner_orders = 0;
+    $total_dinner_sales = 0.0;
+    $total_orders = 0;
+    $total_sales = 0.0;
+
+    foreach ( $report_rows as $row ) {
+        $total_breakfast_orders += intval( $row['breakfast_orders'] );
+        $total_breakfast_sales += floatval( $row['breakfast_sales'] );
+        $total_lunch_orders += intval( $row['lunch_orders'] );
+        $total_lunch_sales += floatval( $row['lunch_sales'] );
+        $total_dinner_orders += intval( $row['dinner_orders'] );
+        $total_dinner_sales += floatval( $row['dinner_sales'] );
+
+        $total_orders += intval( $row['breakfast_orders'] ) + intval( $row['lunch_orders'] ) + intval( $row['dinner_orders'] );
+        $total_sales += floatval( $row['breakfast_sales'] ) + floatval( $row['lunch_sales'] ) + floatval( $row['dinner_sales'] );
+    }
+
+    // Clear any previous output buffers
+    while ( ob_get_level() ) {
+        ob_end_clean();
+    }
+
+    // Set headers for CSV download
+    header( 'Content-Type: text/csv; charset=utf-8' );
+    header( 'Content-Disposition: attachment; filename=monthly-report-' . $filter_month . '.csv' );
+    header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+    header( 'Pragma: no-cache' );
+    header( 'Expires: 0' );
+
+    $output = fopen( 'php://output', 'w' );
+
+    // Headers
+    fputcsv( $output, array( 'Date', 'Breakfast Orders', 'Breakfast Sales', 'Lunch Orders', 'Lunch Sales', 'Dinner Orders', 'Dinner Sales', 'Total Orders', 'Total Sales' ) );
+
+    // Data rows
+    foreach ( $report_rows as $row ) {
+        $breakfast_orders = intval( $row['breakfast_orders'] );
+        $breakfast_sales = floatval( $row['breakfast_sales'] );
+        $lunch_orders = intval( $row['lunch_orders'] );
+        $lunch_sales = floatval( $row['lunch_sales'] );
+        $dinner_orders = intval( $row['dinner_orders'] );
+        $dinner_sales = floatval( $row['dinner_sales'] );
+        $row_orders = $breakfast_orders + $lunch_orders + $dinner_orders;
+        $row_sales = $breakfast_sales + $lunch_sales + $dinner_sales;
+
+        fputcsv( $output, array(
+            $row['order_date'],
+            $breakfast_orders,
+            $breakfast_sales,
+            $lunch_orders,
+            $lunch_sales,
+            $dinner_orders,
+            $dinner_sales,
+            $row_orders,
+            $row_sales
+        ) );
+    }
+
+    // Totals
+    fputcsv( $output, array(
+        'Total',
+        $total_breakfast_orders,
+        $total_breakfast_sales,
+        $total_lunch_orders,
+        $total_lunch_sales,
+        $total_dinner_orders,
+        $total_dinner_sales,
+        $total_orders,
+        $total_sales
+    ) );
+
+    fclose( $output );
+    exit;
+}
+
 function monthly_report_check_woocommerce() {
     if ( ! is_admin() ) {
         return;
@@ -157,6 +264,13 @@ function monthly_report_check_woocommerce() {
 
     if ( current_user_can( 'activate_plugins' ) && ! class_exists( 'WooCommerce' ) ) {
         add_action( 'admin_notices', 'monthly_report_wc_missing_notice' );
+    }
+}
+
+function monthly_report_handle_export() {
+    if ( isset( $_GET['page'] ) && $_GET['page'] === 'monthly-report' && isset( $_GET['export'] ) && $_GET['export'] === 'csv' ) {
+        monthly_report_export_csv();
+        exit;
     }
 }
 
@@ -204,8 +318,8 @@ function monthly_report_get_time_slot_report( $start_date, $end_date ) {
 function monthly_report_add_admin_menu() {
     add_submenu_page(
         'woocommerce',
-        __( 'Date Filter Reports', 'monthly-report' ),
-        __( 'Date Filter Reports', 'monthly-report' ),
+        __( 'Month Filter Reports', 'monthly-report' ),
+        __( 'Month Filter Reports', 'monthly-report' ),
         'manage_woocommerce',
         'monthly-report',
         'monthly_report_render_admin_page'
@@ -271,6 +385,7 @@ function monthly_report_render_admin_page() {
 
             <p>
                 <button type="submit" class="button button-primary"><?php esc_html_e( 'Filter', 'monthly-report' ); ?></button>
+                <a href="<?php echo esc_url( add_query_arg( array( 'export' => 'csv' ), admin_url( 'admin.php?page=monthly-report&month=' . urlencode( $filter_month ) ) ) ); ?>" class="button"><?php esc_html_e( 'Export CSV', 'monthly-report' ); ?></a>
                 <a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=monthly-report' ) ); ?>"><?php esc_html_e( 'Reset', 'monthly-report' ); ?></a>
             </p>
         </form>
