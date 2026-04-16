@@ -37,13 +37,27 @@ function monthly_report_get_time_slot_report( $start_date, $end_date ) {
     $query = "
         SELECT
             DATE(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) AS order_date,
-            SUM(CASE WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '07:00:00' AND '12:30:00' THEN 1 ELSE 0 END) AS breakfast_orders,
-            SUM(CASE WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '07:00:00' AND '12:30:00' THEN total_amount ELSE 0 END) AS breakfast_sales,
-            SUM(CASE WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '12:30:00' AND '16:00:00' THEN 1 ELSE 0 END) AS lunch_orders,
-            SUM(CASE WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '12:30:00' AND '16:00:00' THEN total_amount ELSE 0 END) AS lunch_sales,
-            SUM(CASE WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '18:00:00' AND '23:30:00' THEN 1 ELSE 0 END) AS dinner_orders,
-            SUM(CASE WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '18:00:00' AND '23:30:00' THEN total_amount ELSE 0 END) AS dinner_sales
-        FROM {$table_name}
+    SUM(CASE 
+        WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '07:00:00' AND '12:30:00' 
+        THEN 1 ELSE 0 END) AS breakfast_orders,
+    SUM(CASE 
+        WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '07:00:00' AND '12:30:00' 
+        THEN total_amount ELSE 0 END) AS breakfast_sales,
+
+    SUM(CASE 
+        WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '12:30:00' AND '16:00:00' 
+        THEN 1 ELSE 0 END) AS lunch_orders,
+    SUM(CASE 
+        WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '12:30:00' AND '16:00:00' 
+        THEN total_amount ELSE 0 END) AS lunch_sales,
+
+    SUM(CASE 
+        WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '18:00:00' AND '23:30:00' 
+        THEN 1 ELSE 0 END) AS dinner_orders,
+    SUM(CASE 
+        WHEN TIME(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN '18:00:00' AND '23:30:00' 
+        THEN total_amount ELSE 0 END) AS dinner_sales
+        FROM {$table_name} AS orders
         WHERE status = %s
             AND DATE(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN %s AND %s
         GROUP BY order_date
@@ -70,7 +84,7 @@ function monthly_report_render_admin_page() {
         return;
     }
 
-    $filter_month = isset( $_GET['month'] ) ? sanitize_text_field( wp_unslash( $_GET['month'] ) ) : '';
+    $filter_month = isset( $_GET['month'] ) ? sanitize_text_field( wp_unslash( $_GET['month'] ) ) : date( 'Y-m' );
 
     if ( $filter_month ) {
         $month_date = DateTime::createFromFormat( 'Y-m', $filter_month );
@@ -170,7 +184,7 @@ function monthly_report_render_admin_page() {
                         $row_sales = $breakfast_sales + $lunch_sales + $dinner_sales;
                         ?>
                         <tr>
-                            <td><?php echo esc_html( date_i18n( 'Y-m-d', strtotime( $row['order_date'] ) ) ); ?></td>
+                            <td><?php echo esc_html( $row['order_date'] ); ?></td>
                             <td><?php echo esc_html( $breakfast_orders ); ?></td>
                             <td><?php echo wp_kses_post( wc_price( $breakfast_sales ) ); ?></td>
                             <td><?php echo esc_html( $lunch_orders ); ?></td>
