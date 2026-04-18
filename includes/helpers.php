@@ -81,18 +81,19 @@ function monthly_report_get_dashboard_data() {
     $data = [];
     foreach ( $orders as $order ) {
         $method = $order['payment_method'];
-        if ( ! $method ) {
-            $wc_order = wc_get_order( $order['id'] );
-            if ( $wc_order ) {
-                $meta_value = $wc_order->get_meta( '_vtp_payment_list' );
-                if ( $meta_value ) {
-                    $method = is_array( $meta_value ) && isset( $meta_value[0]['name'] ) ? ($meta_value[0]['name'] == 'Others') ? __( 'UPI', 'monthly-report' ) : $meta_value[0]['name'] : __( 'Unknown', 'monthly-report' );
-                } else {
-                    $method = __( 'Unknown', 'monthly-report' );
-                }
+        $wc_order = wc_get_order( $order['id'] );
+        $is_vite_pos = $wc_order ? ($wc_order->get_meta( '_is_vite_pos' ) === 'Y') ? true : false : false;
+
+            
+        if ( $wc_order && $is_vite_pos ) {
+            $meta_value = $wc_order->get_meta( '_vtp_payment_list' );
+            if ( $meta_value ) {
+                $method = is_array( $meta_value ) && isset( $meta_value[0]['name'] ) ? ($meta_value[0]['name'] == 'Others') ? __( 'UPI', 'monthly-report' ) : $meta_value[0]['name'] : __( 'Unknown', 'monthly-report' );
             } else {
                 $method = __( 'Unknown', 'monthly-report' );
             }
+        } else {
+            $method = $order['payment_method'];
         }
 
         $time = $order['order_time'];

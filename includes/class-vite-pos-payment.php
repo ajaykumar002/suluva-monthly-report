@@ -276,58 +276,29 @@ class Monthly_Report_Vite_POS_Payment {
         $is_vitepos = isset( $is_vitepos_meta ) ? $is_vitepos_meta : '';
 
         // Update payment method
-        $order->set_payment_method( $payment_method );
+        
 
-        // For VitePOS orders, also update the _vtp_payment_list meta
+        // For VitePOS orders, also update the _vtp_payment_list meta if it exists
         if ( $is_vitepos === 'Y' ) {
             $vtp_payment_list_meta = $order->get_meta('_vtp_payment_list');
             $vtp_payment_list = isset( $vtp_payment_list_meta ) ? $vtp_payment_list_meta : array();
 
-            // Update the payment list based on selected method
-            if ( $payment_method === 'others' ) {
-                $vtp_payment_list = array(
-                    array(
-                        'type' => 'O',
-                        'name' => 'Others',
-                        'amount' => $order->get_total(),
-                        'payment_note' => '',
-                        'return_amount' => '',
-                        'flds' => array(
-                            'note' => array(
-                                'title' => 'Note',
-                                'name' => 'note',
-                                'is_show' => 'N',
-                                'val' => ''
-                            )
-                        ),
-                        'is_paid' => 'Y'
-                    )
-                );
-            } elseif ( $payment_method === 'cash' ) {
-                $vtp_payment_list = array(
-                    array(
-                        'type' => 'C',
-                        'name' => 'Cash',
-                        'amount' => $order->get_total(),
-                        'payment_note' => '',
-                        'return_amount' => '',
-                        'flds' => array(
-                            'note' => array(
-                                'title' => 'Note',
-                                'name' => 'note',
-                                'is_show' => 'N',
-                                'val' => ''
-                            )
-                        ),
-                        'is_paid' => 'Y'
-                    )
-                );
-            }
+            // Update the payment list based on selected method, preserving other fields
+            if ( is_array( $vtp_payment_list ) && ! empty( $vtp_payment_list ) ) {
+                if ( $payment_method === 'others' ) {
+                    $vtp_payment_list[0]['type'] = 'O';
+                    $vtp_payment_list[0]['name'] = 'Others';
+                } elseif ( $payment_method === 'cash' ) {
+                    $vtp_payment_list[0]['type'] = 'C';
+                    $vtp_payment_list[0]['name'] = 'Cash';
+                }
 
-            // Update the VitePOS payment list meta
-            if ( ! empty( $vtp_payment_list ) ) {
+                // Update the VitePOS payment list meta
                 $order->update_meta_data( '_vtp_payment_list', $vtp_payment_list );
+            }else {
+                $order->set_payment_method( $payment_method );
             }
+            // If no existing array, do not create new meta
         }
 
         $order->save();
