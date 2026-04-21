@@ -75,6 +75,7 @@ function monthly_report_get_dashboard_data() {
         WHERE status = %s
             AND DATE(CONVERT_TZ(date_created_gmt, '+00:00', '+05:30')) BETWEEN %s AND %s
     ";
+    error_log( 'Executing query: ' . $wpdb->prepare( $query, 'wc-completed', $start_date, $end_date ) );
 
     $orders = $wpdb->get_results( $wpdb->prepare( $query, 'wc-completed', $start_date, $end_date ), ARRAY_A );
 
@@ -82,8 +83,7 @@ function monthly_report_get_dashboard_data() {
     foreach ( $orders as $order ) {
         $method = $order['payment_method'];
         $wc_order = wc_get_order( $order['id'] );
-        $is_vite_pos = $wc_order ? ($wc_order->get_meta( '_is_vite_pos' ) === 'Y') ? true : false : false;
-
+        $is_vite_pos = $wc_order ? ($wc_order->get_meta( '_is_vitepos' ) === 'Y') ? true : false : false;
             
         if ( $wc_order && $is_vite_pos ) {
             $meta_value = $wc_order->get_meta( '_vtp_payment_list' );
