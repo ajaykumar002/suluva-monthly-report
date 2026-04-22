@@ -47,7 +47,13 @@ class Monthly_Report_Dashboard {
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ( $data['breakfast'] ?? [] as $method => $info ) : ?>
+                        <?php 
+                        $breakfastTotalOrders = 0;
+                        $breakfastTotalSales = 0;
+                        foreach ( $data['breakfast'] ?? [] as $method => $info ) : 
+                            $breakfastTotalOrders += $info['count'] ?? 0;
+                            $breakfastTotalSales += $info['sales'] ?? 0;
+                            ?>
                             <tr>
                                 <td><?php echo esc_html( $method ); ?></td>
                                 <td><?php echo esc_html( $info['count'] ?? 0 ); ?></td>
@@ -55,6 +61,14 @@ class Monthly_Report_Dashboard {
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <th><?php esc_html_e( 'Total', 'monthly-report' ); ?></th>
+                            <th><?php echo esc_html( $breakfastTotalOrders ); ?></th>
+                            <th><?php echo wp_kses_post( wc_price( $breakfastTotalSales ) ); ?></th>
+                        </tr>
+                    </tfoot>
+
                 </table>
             </div>
             <div style="flex: 1; min-width: 200px;">
@@ -68,7 +82,13 @@ class Monthly_Report_Dashboard {
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ( $data['lunch'] ?? [] as $method => $info ) : ?>
+                        <?php 
+                        $lunchTotalOrders = 0;
+                        $lunchTotalSales = 0;
+                        foreach ( $data['lunch'] ?? [] as $method => $info ) : 
+                            $lunchTotalOrders += $info['count'] ?? 0;
+                            $lunchTotalSales += $info['sales'] ?? 0;
+                        ?>
                             <tr>
                                 <td><?php echo esc_html( $method ); ?></td>
                                 <td><?php echo esc_html( $info['count'] ?? 0 ); ?></td>
@@ -76,6 +96,13 @@ class Monthly_Report_Dashboard {
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <th><?php esc_html_e( 'Total', 'monthly-report' ); ?></th>
+                            <th><?php echo esc_html( $lunchTotalOrders ); ?></th>
+                            <th><?php echo wp_kses_post( wc_price( $lunchTotalSales ) ); ?></th>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
             <div style="flex: 1; min-width: 200px;">
@@ -89,7 +116,13 @@ class Monthly_Report_Dashboard {
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ( $data['dinner'] ?? [] as $method => $info ) : ?>
+                        <?php 
+                        $dinnerTotalOrders = 0;
+                        $dinnerTotalSales = 0;
+                        foreach ( $data['dinner'] ?? [] as $method => $info ) : 
+                            $dinnerTotalOrders += $info['count'] ?? 0;
+                            $dinnerTotalSales += $info['sales'] ?? 0;
+                        ?>
                             <tr>
                                 <td><?php echo esc_html( $method ); ?></td>
                                 <td><?php echo esc_html( $info['count'] ?? 0 ); ?></td>
@@ -97,6 +130,13 @@ class Monthly_Report_Dashboard {
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <th><?php esc_html_e( 'Total', 'monthly-report' ); ?></th>
+                            <th><?php echo esc_html( $dinnerTotalOrders ); ?></th>
+                            <th><?php echo wp_kses_post( wc_price( $dinnerTotalSales ) ); ?></th>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>

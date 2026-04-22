@@ -16,3 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Load plugin initialization
 require_once plugin_dir_path( __FILE__ ) . 'includes/init.php';
 
+add_filter('wp_mail', function($args){
+    sleep(2); // 2 second delay per email
+    return $args;
+});
